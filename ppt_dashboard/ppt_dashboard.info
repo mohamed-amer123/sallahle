@@ -1,0 +1,5 @@
+name = PPT Dashboard
+description = Custom module to provide custom dashboard to the admins
+core = 7.x
+package = PPT
+scripts[] = js/ppt_dashboard.js

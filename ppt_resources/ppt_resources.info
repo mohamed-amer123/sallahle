@@ -1,0 +1,6 @@
+name = PPT Resources
+description = custom services for PPT project
+core = 7.x
+package = PPT
+dependencies[] = services
+dependencies[] = rest_server

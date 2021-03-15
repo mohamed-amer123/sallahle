@@ -1,0 +1,567 @@
+<?php
+
+/**
+ * @file
+ * Helper functions file.
+ */
+
+/**
+ * Implements hook_services_resources().
+ */
+function ppt_resources_services_resources() {
+  $resources = array();
+
+  // Include the necessary inc files.
+  module_load_include('inc', 'ppt_resources', 'ppt_resources.services');
+
+  // Service Apis for contents.
+  $resources += ppt_resources_resource();
+
+  return $resources;
+}
+
+/**
+ * Get data admin reps.
+ */
+function ppt_resources_get_data_admin_reps($data_admin_id) {
+  if (!$data_admin_id) {
+    return array();
+  }
+  // Get the data admin teams.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'team')
+    ->fieldCondition('field_data_admins', 'target_id', $data_admin_id)
+    ->addMetaData('account', user_load(1));
+
+  $teams = $query->execute();
+  if (!$teams) {
+    return array();
+  }
+  $reps = array();
+  foreach ($teams['node'] as $team) {
+
+    $team_node = node_load($team->nid);
+    if ($team_node && isset($team_node->field_reps[LANGUAGE_NONE])) {
+      foreach ($team_node->field_reps[LANGUAGE_NONE] as $item) {
+        $rep = user_load($item['target_id']);
+        if ($rep && is_rep($rep)) {
+          $reps[] = $rep;
+        }
+      }
+    }
+  }
+  return $reps;
+}
+
+/**
+ * Get sales manager reps.
+ */
+function ppt_resources_get_sales_manager_reps($sales_manager_id, $countries = array(), $is_rep = FALSE) {
+  if (!$sales_manager_id) {
+    return [];
+  }
+  if ($is_rep) {
+    // Get the sales manager ID of the current rep.
+    global $user;
+    if (isset($user->field_sales_manager['und'])) {
+      $sales_manager_id = $user->field_sales_manager['und'][0]['target_id'];
+    }
+  }
+
+  if (!$sales_manager_id && !is_numeric($sales_manager_id)) {
+    return [];
+  }
+  $node = new EntityFieldQuery();
+  $node->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'team')
+    ->fieldCondition('field_sales_managers', 'target_id', $sales_manager_id)
+    ->propertyCondition('status', 1)
+    ->addMetaData('account', user_load(1));
+  $nid = array_keys($node->execute()['node']);
+  $nodes = node_load_multiple($nid);
+  $reps_ids = [];
+  foreach ($nodes as $n){
+    foreach ($n->field_reps['und'] as $rep){
+      $reps_ids[] = $rep['target_id'];
+    }
+  }
+  if (isset($reps_ids) && !empty($reps_ids)) {
+    module_load_include('module', 'ppt_ta_access', 'ppt_ta_access');
+    $reps = array();
+    foreach ($reps_ids as $rep_uid) {
+      $rep = user_load($rep_uid);
+      if (is_rep($rep)) {
+        $reps[] = $rep;
+      }
+    }
+    return $reps;
+  }
+  return array();
+}
+
+/**
+ * Get Comm lead reps.
+ */
+function ppt_resources_get_comm_lead_reps($comm_lead_id, $countries = array()) {
+  if (!$comm_lead_id) {
+    return array();
+  }
+  // Get the comm lead teams.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'team')
+    ->fieldCondition('field_team_comm_lead', 'target_id', $comm_lead_id)
+    ->addMetaData('account', user_load(1));
+  $teams = $query->execute();
+  if (!$teams) {
+    return array();
+  }
+  $reps = array();
+  foreach ($teams['node'] as $team) {
+    $team_node = node_load($team->nid);
+    if ($team_node && isset($team_node->field_reps[LANGUAGE_NONE])) {
+      foreach ($team_node->field_reps[LANGUAGE_NONE] as $item) {
+        $rep = user_load($item['target_id']);
+        if ($rep && is_rep($rep)) {
+          $reps[] = $rep;
+        }
+      }
+    }
+  }
+  return $reps;
+}
+
+/**
+ * Get Comm lead sales managers.
+ */
+function ppt_resources_get_comm_lead_sales_managers($comm_lead_id, $countries = array())
+{
+  if (!$comm_lead_id) {
+    return array();
+  }
+  // Get the data admin teams.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'team')
+    ->fieldCondition('field_team_comm_lead', 'target_id', $comm_lead_id)
+    ->addMetaData('account', user_load(1));
+
+  $teams = $query->execute();
+  if (!$teams) {
+    return array();
+  }
+  $sales_managers = array();
+  foreach ($teams['node'] as $team) {
+    $team_node = node_load($team->nid);
+    if ($team_node && isset($team_node->field_sales_managers['und'][0]['target_id'])) {
+      $sales_manager = user_load($team_node->field_sales_managers['und'][0]['target_id']);
+      if ($sales_manager && is_sales_manager($sales_manager)) {
+        $sales_managers[] = $sales_manager;
+      }
+    }
+  }
+  return $sales_managers;
+}
+
+function ppt_resources_get_comm_lead_teams($comm_lead_id, $countries = array())
+{
+  if (!$comm_lead_id) {
+    return array();
+  }
+  // Get the data admin teams.
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'team')
+    ->fieldCondition('field_team_comm_lead', 'target_id', $comm_lead_id)
+    ->addMetaData('account', user_load(1));
+  $teams = $query->execute();
+  if (!$teams) {
+    return array();
+  }
+  $team_arr = [];
+  foreach ($teams['node'] as $team) {
+    $team_node = node_load($team->nid);
+    $team_name = $team_node->title;
+    $team_arr[]=[
+      "id"=>$team->nid,
+      "name"=>$team_name
+    ];
+  }
+  return $team_arr;
+}
+
+/**
+ * Get global lead users.
+ */
+function get_comm_lead_country_info($user_id){
+  $country_id = (user_load($user_id)->field_country['und'][0]['target_id']);
+  $cluster_id = taxonomy_term_load($country_id)->field_cluster['und'][0]['target_id'];
+  $region_id = taxonomy_term_load($cluster_id)->field_region['und'][0]['target_id'];
+  return [
+    "countries" => $country_id,
+    "clusters" => $cluster_id,
+    "region" => $region_id
+  ];
+}
+/**
+ * Get global lead users.
+ */
+function ppt_resources_get_global_lead_users($global_lead_id) {
+  if (!$global_lead_id) {
+    return array();
+  }
+
+  $global_lead = user_load($global_lead_id);
+  if (!isset($global_lead->field_country) || !isset($global_lead->field_country[LANGUAGE_NONE])) {
+    return array();
+  }
+  $countries = array();
+  foreach ($global_lead->field_country[LANGUAGE_NONE] as $item) {
+    $countries[] = $item['target_id'];
+  }
+
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'user')
+    ->entityCondition('bundle', 'user')
+    ->fieldCondition('field_country', 'target_id', $countries, 'IN')
+    ->propertyCondition('status', 1)
+    ->addMetaData('account', user_load(1));
+
+  $records = $query->execute();
+  if (isset($records['user'])) {
+    module_load_include('module', 'ppt_ta_access', 'ppt_ta_access');
+    $reps_ids = array_keys($records['user']);
+    return $reps_ids;
+  }
+  return array();
+}
+
+/**
+ * Get regional lead sales managers.
+ */
+function ppt_resources_get_regional_lead_sales_managers($regional_lead_id) {
+  if (!$regional_lead_id) {
+    return array();
+  }
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'user')
+    ->entityCondition('bundle', 'user')
+    ->fieldCondition('field_regional_lead', 'target_id', $regional_lead_id)
+    ->propertyCondition('status', 1)
+    ->addMetaData('account', user_load(1));
+
+  $records = $query->execute();
+  if (isset($records['user'])) {
+    module_load_include('module', 'ppt_ta_access', 'ppt_ta_access');
+    $sales_managers_ids = array_keys($records['user']);
+    $sales_managers = array();
+    foreach ($sales_managers_ids as $sales_manager_uid) {
+      $sales_manager = user_load($sales_manager_uid);
+      if (is_sales_manager($sales_manager)) {
+        $sales_managers[] = $sales_manager;
+      }
+    }
+    return $sales_managers;
+  }
+  return array();
+}
+
+/**
+ * Get users per role.
+ */
+function ppt_resources_get_users_per_role($user1, $countries = array(), $withoutTeams = TRUE) {
+  if (!isset($user1)) {
+    global $user;
+    $user1 = $user;
+  }
+
+  if (empty($countries)) {
+    module_load_include('inc', 'ppt_resources', 'ppt_resources.services');
+    $countries = get_user_countries($user1);
+  }
+  $uid = $user1->uid;
+  $users = array();
+  if (is_sales_manager($user1)) {
+    // If the user is sales manager we will get the reps under it.
+    $reps = ppt_resources_get_sales_manager_reps($uid, $countries);
+    $users = array_map(function ($o) {
+      return $o->uid;
+    }, $reps);
+    return $users;
+  }
+  elseif (is_regional_lead($user1)) {
+    // Load all the sales manager for this regional lead and loop over them.
+    $sales_managers = ppt_resources_get_regional_lead_sales_managers($uid);
+    $users = array_map(function ($o) {
+      return $o->uid;
+    }, $sales_managers);
+    foreach ($sales_managers as $sales_manager) {
+      $reps = ppt_resources_get_sales_manager_reps($sales_manager->uid, $countries);
+      $reps_ids = array_map(function ($o) {
+        return $o->uid;
+      }, $reps);
+      $users = array_merge($users, $reps_ids);
+    }
+    return $users;
+  }
+  elseif (is_system_admin($user1)) {
+    // Load all the active users.
+    $users = entity_load('user');
+    unset($users[0]);
+    return array_keys($users);
+  }
+  elseif (is_data_admin($user1)) {
+    module_load_include('module', 'ppt_teams', 'ppt_teams');
+    $teams = ppt_team_get_user_teams($uid);
+    if ($withoutTeams) {
+      $new_users = get_users_without_teams();
+    }
+    else {
+      $new_users = array();
+    }
+
+    if (!empty($teams)) {
+      $teams_ids = array_keys($teams);
+      $users = get_reps_in_teams($teams_ids);
+      foreach ($teams as $team) {
+        if (isset($team->field_sales_managers[LANGUAGE_NONE])) {
+          $users[] = $team->field_sales_managers[LANGUAGE_NONE][0]['target_id'];
+        }
+      }
+    }
+    return array_merge($new_users, $users);
+  }
+  elseif (is_global_lead($user1)) {
+    return ppt_resources_get_global_lead_users($user1->uid);
+  }
+  elseif (is_comm_lead($user1)) {
+    // If the user is sales manager we will get the reps under it.
+    $reps = ppt_resources_get_comm_lead_reps($uid, $countries);
+    $users = array_map(function ($o) {
+      return $o->uid;
+    }, $reps);
+    return $users;
+  }
+  elseif (is_rep($user1)) {
+    return array($uid);
+  }
+  return array();
+}
+
+/**
+ * Get users without teams.
+ */
+function get_users_without_teams() {
+  global $user;
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'user')
+    ->propertyCondition('uid', [$user->uid, 0, 1], 'NOT IN')
+    // Run the query as user 1.
+    ->addMetaData('account', user_load(1));
+
+  $result = $query->execute();
+  if (isset($result['user'])) {
+    $uids = array_map(function ($u) {
+      return $u->uid;
+    }, $result['user']);
+    $users = array();
+    foreach ($uids as $uid) {
+      $teams = ppt_team_get_user_teams($uid);
+      if (empty($teams)) {
+        $users[] = $uid;
+      }
+    }
+    return $users;
+  }
+  return array();
+}
+
+/**
+ * Filter the reps according to the assigned accounts.
+ */
+function ppt_resources_get_reps_of_accounts($reps = array(), $accounts = array()) {
+  if (empty($reps) || empty($accounts)) {
+    return $reps;
+  }
+  $final = array();
+  foreach ($reps as $rep) {
+    $rep_entity = user_load($rep['id']);
+    if (!isset($rep_entity->field_account_product_date[LANGUAGE_NONE])) {
+
+      continue;
+    }
+    $ids = array();
+    foreach ($rep_entity->field_account_product_date[LANGUAGE_NONE] as $item) {
+
+      $ids[] = $item['value'];
+    }
+    $fcs = field_collection_item_load_multiple($ids);
+    foreach ($fcs as $fc) {
+      if (isset($fc->field_account) && isset($fc->field_account[LANGUAGE_NONE])) {
+        if (in_array($fc->field_account[LANGUAGE_NONE][0]['target_id'], $accounts) && !isset($final[$rep['id']])) {
+          $final[$rep['id']] = $rep;
+        }
+      }
+    }
+    continue;
+  }
+  return $final;
+}
+
+/**
+ * Get planned orders content.
+ */
+function ppt_resources_get_planned_order($account, $children, $reps = [], $date = NULL , $type = NUll)
+{
+  global $user;
+  if ($account == NULL || empty($children) || $date == NULL) {
+    return [];
+  }
+  if($type != NULL) {
+    if($type == "planned-period") {
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node')
+        ->entityCondition('bundle', 'planned_order')
+        ->fieldCondition('field_planned_account', 'target_id', $account, '=')
+        ->fieldCondition('field_planned_product', 'target_id', $children, '=')
+        ->fieldCondition('field_planned_period', 'value', $date, '=')
+        ->addMetaData('account', user_load(1));
+      if (isset($reps) && !empty($reps) && (count($reps) != 1 || $reps[0] != $user->uid)) {
+        $query->propertyCondition('uid', $reps, 'IN');
+      }
+      $nodes = $query->execute();
+      return $nodes;
+    }elseif ($type == "actual-period"){
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node')
+        ->entityCondition('bundle', 'planned_order')
+        ->fieldCondition('field_planned_account', 'target_id', $account, '=')
+        ->fieldCondition('field_planned_product', 'target_id', $children, '=')
+        ->fieldCondition('field_planned_actual_period', 'value', $date, '=')
+        ->addMetaData('account', user_load(1));
+      if (isset($reps) && !empty($reps) && (count($reps) != 1 || $reps[0] != $user->uid)) {
+        $query->propertyCondition('uid', $reps, 'IN');
+      }
+      $nodes = $query->execute();
+      return $nodes;
+    }else{
+      return [];
+    }
+  }else{
+    return [];
+  }
+}
+
+/**
+ * Get entry content only stocks.
+ */
+function ppt_resources_get_entries($account, $children, $reps = []) {
+  global $user;
+  if ($account == NULL || empty($children)) {
+    return [];
+  }
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'entry')
+    ->fieldCondition('field_account', 'target_id', $account, '=')
+    ->fieldCondition('field_product', 'target_id', $children, 'IN')
+    ->fieldCondition('field_entry_type', 'value', 'stocks', '=')
+    ->addMetaData('account', user_load(1));
+  if (isset($reps) && !empty($reps) && (count($reps) != 1 || $reps[0] != $user->uid)) {
+    $query->propertyCondition('uid', $reps, 'IN');
+  }
+  $nodes = $query->execute();
+  // Extract ids from the nodes.
+  if (!empty($nodes)) {
+    $entries = array_keys($nodes['node']);
+  }
+  if(!isset($entries)){
+    return ;
+  }
+  return $entries;
+}
+
+/**
+ * Get targets.
+ */
+function get_targets($uids, $account_id, $product_ids, $date) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'target')
+    ->propertyCondition('uid', $uids, 'IN')
+    ->fieldCondition('field_target_account', 'target_id', $account_id , 'IN')
+    ->fieldCondition('field_target_product', 'target_id', $product_ids, 'IN')
+    ->fieldCondition('field_target_year', 'value', $date['start_date'], '>=')
+    ->fieldCondition('field_target_year', 'value', $date['end_date'], '<=')
+    ->propertyCondition('status', 1)
+    ->addMetaData('account', user_load(1));
+  $result = $query->execute();
+  if(!empty($result)) {
+    $ids = array_keys($result['node']);
+    $targets = node_load_multiple($ids);
+    return $targets;
+  }
+}
+
+/**
+ * Get planned orders.
+ */
+function get_planned_orders($uids, $account_id, $product_ids, $date)
+{
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'planned_order');
+  if(isset($uids)) {
+    $query->propertyCondition('uid', $uids, 'IN');
+  }
+  $query->fieldCondition('field_planned_account', 'target_id', $account_id , 'IN')
+    ->fieldCondition('field_planned_product', 'target_id', $product_ids, 'IN')
+    ->fieldCondition('field_planned_delivered', 'value', TRUE)
+    ->fieldCondition('field_planned_period', 'value', $date['start_date'], '>=')
+    ->fieldCondition('field_planned_period', 'value', $date['end_date'], '<=')
+    ->propertyCondition('status', 1)
+    ->addMetaData('account', user_load(1));
+
+  $result = $query->execute();
+  if(!empty($result)) {
+    $ids = array_keys($result['node']);
+    $orders = node_load_multiple($ids);
+    return $orders;
+  }
+}
+
+/**
+ * Get price list.
+ */
+function get_pricelist($account_id, $product_ids) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'pricelist')
+    ->fieldCondition('field_pricelist_account', 'target_id', $account_id , 'IN')
+    ->addMetaData('account', user_load(1));
+
+  $result = $query->execute();
+  if(!empty($result)) {
+    $ids = array_keys($result['node']);
+    $pricelist = node_load_multiple($ids);
+    return $pricelist;
+  }
+}
+
+/**
+ * Get thermatic area products.
+ */
+function get_thermatic_area_products_ids($thermatic_id)
+{
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'taxonomy_term')
+    ->entityCondition('bundle', 'product')
+    ->fieldCondition('field_thermatic_area', 'target_id', $thermatic_id )
+    ->addMetaData('account', user_load(1));
+  $result = $query->execute();
+  if(!empty($result)) {
+    $ids = array_keys($result['taxonomy_term']);
+    return $ids;
+  }
+}

@@ -1,0 +1,901 @@
+<?php
+
+/**
+ * @file
+ * Includes dashboard pages callbacks.
+ */
+
+/**
+ * Decode the authentication header and set the cookie.
+ */
+function _handle_app_headers() {
+
+    if (isset($_SERVER['HTTP_AUTH']) && preg_match('`^S?SESS[0-9a-f]{32}=[\w-]+$`', $_SERVER['HTTP_AUTH'])) {
+      list($name, $value) = explode('=', $_SERVER['HTTP_AUTH']);
+      if (!array_key_exists($name, $_COOKIE)) {
+        $_COOKIE[$name] = $value;
+      }
+    }
+
+//
+//  if (isset($_SERVER['HTTP_AUTH'])) {
+//    list($session_name, $sessid) = explode('=', $_SERVER['HTTP_AUTH']);
+//    session_name($session_name);
+//    $_COOKIE[session_name()] = $sessid;
+//    //_drupal_session_read($sessid);
+//
+//  }
+
+//  if (isset($_SERVER['HTTP_AUTH'])) {
+//    list($session_name, $sessid) = explode('=', $_SERVER['HTTP_AUTH']);
+//    if ($session_name != 'undefined' && $sessid != 'undefined') {
+//      session_name($session_name);
+//      $_COOKIE['token'] = $_SERVER['HTTP_X_CSRF_TOKEN'] = drupal_get_token('services');
+//      $_COOKIE[$session_name] = $sessid;
+//      //_drupal_session_read($sessid);
+//    }
+//  }
+}
+
+/**
+ * Implements hook_services_resources().
+ */
+function ppt_dashboard_services_resources() {
+  $resources = array();
+  // Include the necessary inc files.
+  module_load_include('inc', 'ppt_dashboard', 'ppt_dashboard.services');
+  // Service Apis for contents.
+  $resources += ppt_dashboard_resource();
+  return $resources;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function ppt_dashboard_menu() {
+  $items['dashboard/reports/planned-orders'] = array(
+    'title' => 'General Planned Orders',
+    'description' => 'Custom Dashboard for the platform admins / general planned orders',
+    'page callback' => 'ppt_dashboard_page_planned_orders',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+
+  $items['dashboard/reports/products'] = array(
+    'title' => 'Per Product',
+    'description' => 'Custom Dashboard for the platform admins / per product',
+    'page callback' => 'ppt_dashboard_page_product',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/products_kam'] = array(
+    'title' => 'Per Product KAM',
+    'description' => 'Custom Dashboard for the platform admins / per product KAM',
+    'page callback' => 'ppt_dashboard_page_product_kam',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/consumptions-products'] = array(
+    'title' => 'Consumptions/stocks per product',
+    'description' => 'Custom Dashboard for the platform admins / per consumptions product',
+    'page callback' => 'ppt_dashboard_page_consumptions_product',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/indications'] = array(
+    'title' => 'Per Indication',
+    'description' => 'Custom Dashboard for the platform admins / per indication',
+    'page callback' => 'ppt_dashboard_page_indication',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/target-country'] = array(
+    'title' => 'Target on Country Level',
+    'description' => 'Custom Dashboard for the platform admins / per indication',
+    'page callback' => 'ppt_dashboard_page_target_country',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/target-account'] = array(
+    'title' => 'Target on Account Level',
+    'description' => 'Custom Dashboard for the platform admins / per indication',
+    'page callback' => 'ppt_dashboard_page_target_account',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/target-account-rep'] = array(
+    'title' => 'Target on Account & Rep Level',
+    'description' => 'Custom Dashboard for the platform admins / per indication',
+    'page callback' => 'ppt_dashboard_page_target_account_rep',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/all'] = array(
+    'title' => 'General Report',
+    'description' => 'Custom Dashboard for the platform admins / Gerneral Report',
+    'page callback' => 'ppt_dashboard_page_general_report',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/orders'] = array(
+    'title' => 'Orders Report',
+    'description' => 'Custom Dashboard for the platform admins / Orders Report',
+    'page callback' => 'ppt_dashboard_page_orders_report',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/target-delivered-report'] = array(
+    'title' => 'Target VS Delivered',
+    'description' => 'Custom Dashboard for the target reports',
+    'page callback' => 'ppt_dashboard_target_delivered_report',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  $items['dashboard/reports/expected-orders-report'] = array(
+    'title' => 'Expected Orders',
+    'description' => 'Custom Dashboard for the Expected reports',
+    'page callback' => 'ppt_dashboard_expected_orders_report',
+    'access arguments' => array('access PPT dashboard reports'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ppt_dashboard_permission() {
+  return array(
+    'access PPT dashboard reports' => array(
+      'title' => t('Access to the custom PPT dashboard page.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ppt_dashboard_theme() {
+  return array(
+    'ppt_dashboard_page_planned_orders_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-planned-orders',
+    ),
+    'ppt_dashboard_page_product_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-product',
+    ),
+    'ppt_dashboard_page_consumptions_product_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-consumptions-product',
+    ),
+    'ppt_dashboard_page_indication_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-indication',
+    ),
+    'ppt_dashboard_page_target_country_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-target-country',
+    ),
+    'ppt_dashboard_page_target_account_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-target-account',
+    ),
+    'ppt_dashboard_page_target_account_rep_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-target-account-rep',
+    ),
+    'ppt_dashboard_page_general_report_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-general-report',
+    ),
+    'ppt_dashboard_page_orders_report_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-orders-report',
+    ),
+    'ppt_dashboard_page_target_delivered_report_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-target-delivered-report',
+    ),
+    'ppt_dashboard_page_product_kam_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-product-kam',
+    ),
+    'ppt_dashboard_page_expected_orders_report_template' => array(
+      // File name will be custom-page.tpl.php.
+      'template' => 'templates/dashboard-page-expectd-orders-report',
+    ),
+  );
+}
+
+/**
+ * Implements hook_init().
+ */
+function ppt_dashboard_init() {
+  _handle_app_headers();
+  if (drupal_is_front_page()) {
+    $path_frags = array('dashboard', 'reports', 'front');
+  }
+  else {
+    $path = current_path();
+    $path_frags = explode('/', $path);
+  }
+  if ($path_frags[0] == "dashboard" && isset($path_frags[1]) && $path_frags[1] == 'reports') {
+    global $user;
+    $settings = array(
+      'ppt_dashboard' => array(
+        'uid' => $user->uid,
+        'roles' => $user->roles,
+        'resource' => $path_frags[2],
+      ),
+    );
+    if ($path_frags[2] == 'front') {
+      $settings['ppt_dashboard']['resources'] = array(
+        "get_products" => array(
+          "selectors" => array("cot"),
+          "name" => "products",
+          "label" => "per product",
+        ),
+        "get_indications" => array(
+          "selectors" => array("cot"),
+          "name" => "indications",
+          "label" => "per indicaion",
+        ),
+      );
+    }
+    drupal_add_js($settings, 'setting');
+  }
+}
+
+/**
+ * Per Indication page callback.
+ */
+function ppt_dashboard_page_indication() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      'resources' => array(
+        "get_indications" => array(
+          "selectors" => array("cot", "npr", "drop"),
+          "label" => "per indication",
+          "name" => "indications",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_indication_template');
+}
+
+/**
+ * General Planned Orders page callback.
+ */
+function ppt_dashboard_page_planned_orders() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_planned_orders" => array(
+          "selectors" => array("planned", "delivered"),
+          "label" => "planned orders",
+          "name" => "planned orders",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_planned_orders_template');
+}
+
+/**
+ * Per Product page callback function.
+ */
+function ppt_dashboard_page_product() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_products_all" => array(
+          "selectors" => array("cot", "npr", "drop"),
+          "label" => "per product",
+          "name" => "products",
+        ),
+        "get_usd_stocks" => array(
+          "selectors" => array("stocks", "consumption", "usd"),
+          "label" => "per product",
+          "name" => "products",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_product_template');
+}
+
+/**
+ * Per Product KAM page callback function.
+ */
+function ppt_dashboard_page_product_kam() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_usd_stocks" => array(
+          "selectors" => array("stocks", "consumption"),
+          "label" => "per dosage",
+          "name" => "products",
+        ),
+        "get_next_planned_orders" => array(
+          "selectors" => array("planned"),
+          "label" => "per product KAM",
+          "name" => "next_planned",
+        ),
+        "get_delivered_planned_orders" => array(
+          "selectors" => array("delivered"),
+          "label" => "per product KAM",
+          "name" => "delivered_planned",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_product_kam_template');
+}
+
+/**
+ * Consumptions/stocks per product page callback function.
+ */
+function ppt_dashboard_page_consumptions_product() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_consumptions_stocks_per_product" => array(
+          "selectors" => array("stocks", "consumption"),
+          "label" => "per product",
+          "name" => "consumptions_stocks",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_consumptions_product_template');
+}
+
+/**
+ * Target on Country Level page callback function.
+ */
+function ppt_dashboard_page_target_country() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_target_account" => array(
+          "selectors" => array("cot", "npr"),
+          "label" => "target",
+          "name" => "target",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_target_country_template');
+}
+
+/**
+ * Target on Account Level page callback function.
+ */
+function ppt_dashboard_page_target_account() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_target_account" => array(
+          "selectors" => array("cot", "npr"),
+          "label" => "target",
+          "name" => "target",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_target_account_template');
+}
+
+/**
+ * Target on Account & Rep Level page callback.
+ */
+function ppt_dashboard_page_target_account_rep() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_target_account" => array(
+          "selectors" => array("cot", "npr"),
+          "label" => "target",
+          "name" => "target",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_target_account_rep_template');
+}
+
+/**
+ * General report page callback.
+ */
+function ppt_dashboard_page_general_report() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_products_all" => array(
+          "selectors" => array("cot", "npr"),
+          "label" => "per product",
+          "name" => "products",
+        ),
+        "get_usd_stocks" => array(
+          "selectors" => array("usd"),
+          "label" => "per product",
+          "name" => "products",
+        ),
+        "get_indications_per_month" => array(
+          "selectors" => array("cot", "npr"),
+          "label" => "per indications",
+          "name" => "pie-indications",
+        ),
+        "get_target_total" => array(
+          "selectors" => array("target-cot", "target-npr"),
+          "label" => "target per product",
+          "name" => "target-products",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_general_report_template');
+}
+
+/**
+ * Orders report page callback.
+ */
+function ppt_dashboard_page_orders_report() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_planned_products_report" => array(
+          "selectors" => array("planned-orders"),
+          "label" => "target per planned orders",
+          "name" => "orders-report",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_orders_report_template');
+}
+
+/**
+ * Target VS Delivered page callback function.
+ */
+function ppt_dashboard_target_delivered_report() {
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_target_delivered_report" => array(
+          "selectors" => array("target-cot", "target-npr"),
+          "label" => "target per product",
+          "name" => "delivered-report",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_target_delivered_report_template');
+}
+
+/**
+ * Custom callback function.
+ */
+function ppt_dashboard_expected_orders_report()
+{
+  drupal_add_js(array(
+    'ppt_dashboard' => array(
+      "resources" => array(
+        "get_expected_orders" => array(
+          "selectors" => array("target-cot", "target-npr"),
+          "label" => "Expected Orders",
+          "name" => "expected-orders-report",
+        ),
+      ),
+    ),
+  ), 'setting');
+  return theme('ppt_dashboard_page_expected_orders_report_template');
+}
+
+/**
+ * Build an array of regions, clusters, and countries based on loggedin user.
+ */
+function ppt_dashboard_get_filters_arraies() {
+  global $user;
+  if ($user->uid == 0) {
+    return array();
+  }
+  $countries = array();
+  $regions = array();
+  // If the logged in user is a sales manager.
+  if (is_sales_manager($user)) {
+    // Get reps of sales manager.
+    module_load_include('module', 'ppt_resources', 'ppt_resources');
+    $reps = ppt_resources_get_sales_manager_reps($user->uid);
+    foreach ($reps as $rep) {
+      if (!isset($rep->field_country[LANGUAGE_NONE])) {
+        continue;
+      }
+      // Loop over the user countries.
+      foreach ($rep->field_country[LANGUAGE_NONE] as $item) {
+        if (!isset($countries[$item['target_id']])) {
+          $countries[] = $item['target_id'];
+        }
+      }
+    }
+    // Loop over the countries to get the clusters.
+    foreach ($countries as $country) {
+      $country_term = taxonomy_term_load($country);
+      if (!isset($country_term->field_cluster[LANGUAGE_NONE])) {
+        continue;
+      }
+      $cluster = $country_term->field_cluster[LANGUAGE_NONE][0]['target_id'];
+      $cluster_term = taxonomy_term_load($cluster);
+      if (!isset($cluster_term->field_region[LANGUAGE_NONE])) {
+        continue;
+      }
+      $region = $cluster_term->field_region[LANGUAGE_NONE][0]['target_id'];
+      $region_term = taxonomy_term_load($region);
+      if (!isset($regions[$region])) {
+        $regions[$region]['name'] = $region_term->name;
+        $regions[$region]['id'] = $region_term->tid;
+        $regions[$region]['data'] = array();
+      }
+      if (!isset($regions[$region]['data'][$cluster])) {
+        $regions[$region]['data'][$cluster]['name'] = $cluster_term->name;
+        $regions[$region]['data'][$cluster]['id'] = $cluster_term->tid;
+        $regions[$region]['data'][$cluster]['data'] = array();
+      }
+      if (!isset($regions[$region]['data'][$cluster]['data'][$country])) {
+        $regions[$region]['data'][$cluster]['data'][$country]['name'] = $country_term->name;
+        $regions[$region]['data'][$cluster]['data'][$country]['id'] = $country_term->tid;
+      }
+    }
+    return $regions;
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ */
+function ppt_dashboard_views_query_alter(&$view, &$query) {
+  global $user;
+  if ($view->name == "planned_orders" || $view->name == "dashboard_planned_orders") {
+
+    $uids = ppt_resources_get_users_per_role($user);
+
+    $query->add_where(1, 'node.uid', $uids, 'IN');
+    // Make account query for multiple selection.
+    $url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    $parts = parse_url($url);
+    if(!empty($parts['query'])) {
+      parse_str($parts['query'], $search_query);
+    }
+    if (isset($search_query['field_planned_account_target_id'])) {
+      $query->where[1]['conditions'][2]['operator'] = "IN";
+      $query->where[1]['conditions'][2]['value'] = $search_query['field_planned_account_target_id'];
+    }
+    if (isset($search_query['field_planned_product_target_id'])) {
+      $query->where[1]['conditions'][3]['operator'] = "IN";
+      $query->where[1]['conditions'][3]['value'] = $search_query['field_planned_product_target_id'];
+    }
+  } elseif ($view->name == "daily_activity") {
+
+    $uids = ppt_resources_get_users_per_role($user);
+
+    $query->add_where(1, 'node.uid', $uids, 'IN');
+    $url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    $parts = parse_url($url);
+    if(!empty($parts['query'])) {
+      parse_str($parts['query'], $search_query);
+      $count = 2;
+      if (isset($search_query['field_activity_account_target_id'])) {
+        $query->where[1]['conditions'][$count]['operator'] = "IN";
+        $query->where[1]['conditions'][$count]['value'] = $search_query['field_activity_account_target_id'];
+        $count = $count + 1;
+      }
+      if (isset($search_query['field_activity_product_target_id'])) {
+        $query->where[1]['conditions'][$count]['operator'] = "IN";
+        $query->where[1]['conditions'][$count]['value'] = $search_query['field_activity_product_target_id'];
+        $count = $count + 1;
+      }
+      if (isset($search_query['field_activity_department_target_id'])) {
+        $query->where[1]['conditions'][$count]['operator'] = "IN";
+        $query->where[1]['conditions'][$count]['value'] = $search_query['field_activity_department_target_id'];
+        $count = $count + 1;
+      }
+      if (isset($search_query['field_activity_reason_target_id'])) {
+        $query->where[1]['conditions'][$count]['operator'] = "IN";
+        $query->where[1]['conditions'][$count]['value'] = $search_query['field_activity_reason_target_id'];
+        $count = $count + 1;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ppt_dashboard_form_alter(&$form, &$form_state, $form_id) {
+  if (isset($form_state['view'])) {
+    global $user;
+    $view = $form_state['view'];
+    if (($view->name == "planned_orders" || $view->name == "dashboard_planned_orders") && ($view->current_display == "page" ||
+      $view->current_display == "views_data_export_1" ||
+      $view->current_display == "views_data_export_2")) {
+      // Get current user reps.
+      if (!is_comm_lead($user)) {
+        $options = [];
+        $options[''] ='Select Region';
+        $vocabulary = taxonomy_vocabulary_machine_name_load('region');
+        $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+        foreach($terms as $term) {
+          $options[$term->tid] = $term->name;
+        }
+        $temp = [
+          'filter-region' => [
+            'operator' =>  'nid_op',
+            'value' =>  'region',
+            'label' =>  'Region',
+            'description' =>  ''
+          ],
+          'filter-cluster' => [
+            'operator' =>  'nid_op',
+            'value' =>  'cluster',
+            'label' =>  'Cluster',
+            'description' =>  ''
+          ],
+          'filter-country' => [
+            'operator' =>  'nid_op',
+            'value' =>  'country',
+            'label' =>  'Country',
+            'description' =>  ''
+          ]
+        ];
+        $temp = array_merge($temp,$form['#info']);
+        $form["#info"] = $temp;
+        $form['region'] = [
+          '#type' => 'select',
+          '#options' => $options,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select region'
+          ]
+        ];
+        $form['cluster'] = [
+          '#type' => 'select',
+          '#options' => [],
+          '#default_value' => '',
+          '#multiple' => TRUE,
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select cluster'
+          ]
+        ];
+        $form['country'] = [
+          '#type' => 'select',
+          '#options' => [],
+          '#multiple' => TRUE,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select Country'
+          ]
+        ];
+        // Reps.
+        $form['uid_data']['#type'] = "select";
+        $form['uid_data']['#multiple'] = TRUE;
+        $form['uid_data']['#validated'] = TRUE;
+        // Accounts.
+        $form['field_planned_account_target_id']['#type'] = "select";
+        $form['field_planned_account_target_id']['#multiple'] = TRUE;
+        $form['field_planned_account_target_id']['#validated'] = TRUE;
+      }
+      else{
+        $teams = ppt_resources_get_comm_lead_teams($user->uid);
+        $options = [];
+        $options[''] = 'Select team';
+        foreach ($teams as $team) {
+          $options[$team['id']] = $team['name'];
+        }
+        $temp = ['filter-team' => [
+          'operator' =>  'nid_op',
+          'value' =>  'team',
+          'label' =>  'Team',
+          'description' =>  ''
+        ]];
+        $temp = array_merge($temp,$form['#info']);
+        $form["#info"] = $temp;
+        $form['team'] = [
+          '#type' => 'select',
+          '#options' => $options,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select team'
+          ]
+        ];
+        $form['uid_data']['#type'] = "select";
+        $form['uid_data']['#multiple'] = TRUE;
+        $form['uid_data']['#options'] = [];
+        $form['uid_data']['#validated'] = TRUE;
+        $form['field_planned_account_target_id']['#type'] = "select";
+        $form['field_planned_account_target_id']['#multiple'] = TRUE;
+        $form['field_planned_account_target_id']['#options'] = [];
+        $form['field_planned_account_target_id']['#validated'] = TRUE;
+      }
+      // Products.
+      $form['field_planned_product_target_id']['#type'] = "select";
+      $form['field_planned_product_target_id']['#multiple'] = TRUE;
+      $form['field_planned_product_target_id']['#options'] = [];
+      $form['field_planned_product_target_id']['#validated'] = TRUE;
+    }
+    elseif ($view->name == "daily_activity" && ($view->current_display == "page" ||
+      $view->current_display == "views_data_export_1" ||
+      $view->current_display == "views_data_export_2")) {
+
+      if(!is_comm_lead($user)) {
+        $options[''] ='Select Region';
+        $vocabulary = taxonomy_vocabulary_machine_name_load('region');
+        $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+        foreach($terms as $term) {
+          $options[$term->tid] = $term->name;
+        }
+        $temp = [
+          'filter-region' => [
+            'operator' =>  'nid_op',
+            'value' =>  'region',
+            'label' =>  'Region',
+            'description' =>  ''
+          ],
+          'filter-cluster' => [
+            'operator' =>  'nid_op',
+            'value' =>  'cluster',
+            'label' =>  'Cluster',
+            'description' =>  ''
+          ],
+          'filter-country' => [
+            'operator' =>  'nid_op',
+            'value' =>  'country',
+            'label' =>  'Country',
+            'description' =>  ''
+          ]
+        ];
+        $temp = array_merge($temp,$form['#info']);
+        $form["#info"] = $temp;
+        $form['region'] = [
+          '#type' => 'select',
+          '#options' => $options,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select region'
+          ]
+        ];
+        $form['cluster'] = [
+          '#type' => 'select',
+          '#options' => [],
+          '#default_value' => '',
+          '#multiple' => TRUE,
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select cluster'
+          ]
+        ];
+        $form['country'] = [
+          '#type' => 'select',
+          '#options' => [],
+          '#multiple' => TRUE,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select Country'
+          ]
+        ];
+        // Update field rep.
+        $form['uid_data']['#type'] = "select";
+        $form['uid_data']['#multiple'] = TRUE;
+        $form['uid_data']['#validated'] = TRUE;
+        // Update field account.
+        $form['field_activity_account_target_id']['#type'] = "select";
+        $form['field_activity_account_target_id']['#multiple'] = TRUE;
+        $form['field_activity_account_target_id']['#validated'] = TRUE;
+      }else{
+        $teams = ppt_resources_get_comm_lead_teams($user->uid);
+        $options = [];
+        $options[''] = 'Select team';
+        foreach ($teams as $team) {
+          $options[$team['id']] = $team['name'];
+        }
+        $temp = ['filter-team' => [
+          'operator' =>  'nid_op',
+          'value' =>  'team',
+          'label' =>  'Team',
+          'description' =>  ''
+        ]];
+        $temp = array_merge($temp,$form['#info']);
+        $form["#info"] = $temp;
+        $form['team'] = [
+          '#type' => 'select',
+          '#options' => $options,
+          '#default_value' => '',
+          '#validated' => TRUE,
+          '#attributes'=>[
+            'placeholder' => 'Select team'
+          ]
+        ];
+        $form['uid_data']['#type'] = "select";
+        $form['uid_data']['#multiple'] = TRUE;
+        $form['uid_data']['#options'] = [];
+        $form['uid_data']['#validated'] = TRUE;
+        $form['field_activity_account_target_id']['#type'] = "select";
+        $form['field_activity_account_target_id']['#multiple'] = TRUE;
+        $form['field_activity_account_target_id']['#options'] = [];
+        $form['field_activity_account_target_id']['#validated'] = TRUE;
+      }
+
+      // Update field product.
+      $form['field_activity_product_target_id']['#type'] = "select";
+      $form['field_activity_product_target_id']['#multiple'] = TRUE;
+      $form['field_activity_product_target_id']['#options'] = [];
+      $form['field_activity_product_target_id']['#validated'] = TRUE;
+      // Update field departments.
+      $departments = taxonomy_vocabulary_machine_name_load('departments');
+      $departments_terms = entity_load('taxonomy_term', FALSE, ['vid' => $departments->vid]);
+      $departments_options = [];
+      foreach ($departments_terms as $term) {
+        $departments_options[$term->tid] = $term->name;
+      }
+      $form['field_activity_department_target_id']['#type'] = "select";
+      $form['field_activity_department_target_id']['#multiple'] = TRUE;
+      $form['field_activity_department_target_id']['#options'] = $departments_options;
+      $form['field_activity_department_target_id']['#validated'] = TRUE;
+      // Update field reasons of visit.
+      $reasons = taxonomy_vocabulary_machine_name_load('reasons_of_visit');
+      $reasons_terms = entity_load('taxonomy_term', FALSE, ['vid' => $reasons->vid]);
+      $reasons_options = [];
+      foreach ($reasons_terms as $term) {
+        $reasons_options[$term->tid] = $term->name;
+      }
+      $form['field_activity_reason_target_id']['#type'] = "select";
+      $form['field_activity_reason_target_id']['#multiple'] = TRUE;
+      $form['field_activity_reason_target_id']['#options'] = $reasons_options;
+      $form['field_activity_reason_target_id']['#validated'] = TRUE;
+    }
+  }
+}
+
+/**
+ * Custom callback(duplicate as found in resources.services.inc).
+ */
+function get_accounts_for_rep($loaded_user, $only_valid_date = TRUE) {
+  // Getting the wrapper to easy extract data.
+  $loaded_user_wrapper = entity_metadata_wrapper('user', $loaded_user);
+  // Getting all the field collection items.
+  $account_product_date_items = $loaded_user_wrapper->field_account_product_date->value();
+
+  // Looping on each item to get the accounts.
+  $accounts = [];
+  foreach ($account_product_date_items as $item) {
+    $item_wrapper = entity_metadata_wrapper('field_collection_item', $item);
+    $account = $item_wrapper->field_account->value();
+
+    // Check if the date is valid.
+    $now = REQUEST_TIME;
+    if ($item_wrapper->field_end_date->value()) {
+      $date_valid = $now >= $item_wrapper->field_start_date->value() && $now <= $item_wrapper->field_end_date->value();
+    }
+    else {
+      $date_valid = $now >= $item_wrapper->field_start_date->value();
+    }
+    // If the account isn't already in accounts array and the date still valid.
+    if ($account && isset($account->nid) && !in_array($account->nid, $accounts)) {
+      if (!$only_valid_date || $date_valid) {
+        array_push($accounts, $account->nid);
+      }
+    }
+  }
+  return $accounts;
+}
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function ppt_dashboard_views_pre_render(&$view) {
+  global $user;
+  if ($view->name == 'dashboard_accounts' && $view->current_display == 'page') {
+    // Hide dosage from accounts view.
+    $view->field['view']->options['exclude'] = TRUE;
+  }
+  if(!is_data_admin($user) && !is_system_admin($user)){
+    if($view->name == 'daily_activity' && $view->current_display == 'page') {
+      $view->field['edit_node']->options['exclude'] = TRUE;
+    }
+  }
+}
